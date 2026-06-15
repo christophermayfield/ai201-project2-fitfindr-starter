@@ -16,25 +16,45 @@ You must have at least 3 tools. The three required tools are listed — add any 
 
 **What it does:**
 <!-- Describe what this tool does in 1–2 sentences -->
+this is a helps users finding secondhand pieces of clothing. It helps them figure out how to wear them. 
 
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
-- `description` (str): ...
-- `size` (str): ...
-- `max_price` (float): ...
+- `description` (str): describes context of the item
+- `size` (str): Waist, Length
+- `max_price` (float): maximum price they are willing to pay
+- `category` (str): tops, bottoms, outer
+-  `Conditions` (str): describes what condition the item is in
+-  `brand`(str): brand of the item
+- `colors`([str]): color of the item
+- `platform`(str): where the item is sold
+- `id` (str): unique identifier for the item
+- `title`(str): title of the item
+- `style_tags`([str]): tags that describe the style
+
 
 **What it returns:**
 <!-- Describe the return value — what fields does a result contain? -->
+ Returns:
+        A list of matching listing dicts, sorted by relevance (best match first).
+        
 
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if no listings match? -->
-
+Returns an empty list if nothing matches — does NOT raise an exception.
 ---
 
 ### Tool 2: suggest_outfit
 
 **What it does:**
 <!-- Describe what this tool does in 1–2 sentences -->
+
+Given a thrifted item and the user's wardrobe, suggest 1–2 complete outfits.
+
+    Args:
+        new_item: A listing dict (the item the user is considering buying).
+        wardrobe: A wardrobe dict with an 'items' key containing a list of
+                  wardrobe item dicts. May be empty — handle this gracefully.
 
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->

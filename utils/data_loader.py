@@ -12,6 +12,7 @@ from typing import Optional
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
 
+
 def load_listings() -> list[dict]:
     """
     Load all mock listings from the dataset.
