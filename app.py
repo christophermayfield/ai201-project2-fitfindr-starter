@@ -49,15 +49,12 @@ def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str]:
             (listing_text, outfit_suggestion, fit_card)
         Each string maps to one of the three output panels in the UI.
 
-    TODO:
-        1. Guard against an empty query (return early with an error message).
-        2. Select the wardrobe based on wardrobe_choice.
-        3. Call run_agent() with the query and selected wardrobe.
-        4. If session["error"] is set, return the error in the first panel
-           and empty strings for the other two.
-        5. Otherwise, format session["selected_item"] into a readable listing_text
-           string and return it along with session["outfit_suggestion"] and
-           session["fit_card"].
+    Steps:
+        1. Guard against an empty query.
+        2. Select wardrobe from wardrobe_choice.
+        3. Call run_agent() with the query and wardrobe.
+        4. On session["error"], return error in panel 1 only.
+        5. Otherwise return formatted listing, outfit, and fit card.
     """
     if not user_query or not user_query.strip():
         return "Please enter a search query.", "", ""

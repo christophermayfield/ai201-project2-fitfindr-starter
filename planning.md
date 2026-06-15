@@ -233,8 +233,16 @@ Yes, all the functions look like how they're implemented in the sped
 
 **Milestone 4 — Planning loop and state management:**
 
+Implemented in `agent.py` using regex query parsing (`_parse_query`). The planning loop matches the architecture diagram:
 
+1. `run_agent()` initializes a session dict (`_new_session`) as the single source of truth.
+2. Parsed query params (`description`, `size`, `max_price`) are stored in `session["parsed"]`.
+3. `search_listings` runs first; up to 3 matches are stored in `session["search_results"]`.
+4. If no results: `session["error"]` is set and the function returns early — `suggest_outfit` and `create_fit_card` are **not** called.
+5. On success: top result → `session["selected_item"]` → `session["outfit_suggestion"]` → `session["fit_card"]`.
+6. `app.py` `handle_query()` reads the completed session and maps it to the three Gradio panels.
 
+Verified with `tests/test_agent.py`: branching on empty search results, session field population, and downstream tools not called on the no-results path.
 ---
 
 ## A Complete Interaction (Step by Step)

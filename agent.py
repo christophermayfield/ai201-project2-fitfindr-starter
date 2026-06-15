@@ -130,40 +130,19 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         first — if it is not None, the interaction ended early and the other
         output fields (outfit_suggestion, fit_card) will be None.
 
-    TODO — implement this function using the planning loop you designed in planning.md:
-
-        Step 1: Initialize the session with _new_session().
-
-        Step 2: Parse the user's query to extract a description, size, and
-                max_price. You can use regex, string splitting, or ask the LLM
-                to parse it — document your choice in planning.md.
-                Store the result in session["parsed"].
-
-        Step 3: Call search_listings() with the parsed parameters.
-                Store results in session["search_results"].
-                If no results: set session["error"] to a helpful message and
-                return the session early. Do NOT proceed to suggest_outfit
-                with empty input.
-
-        Step 4: Select the item to use (e.g., the top result).
-                Store it in session["selected_item"].
-
-        Step 5: Call suggest_outfit() with the selected item and wardrobe.
-                Store the result in session["outfit_suggestion"].
-
-        Step 6: Call create_fit_card() with the outfit suggestion and selected item.
-                Store the result in session["fit_card"].
-
-        Step 7: Return the session.
-
-    Before writing code, complete the Planning Loop and State Management sections
-    of planning.md — your implementation should match what you described there.
+    Planning loop (see planning.md):
+        1. Init session → 2. Parse query → 3. search_listings
+        → branch on results → 4. select top item → 5. suggest_outfit
+        → 6. create_fit_card → 7. return session
     """
+    # Step 1: initialize session
     session = _new_session(query, wardrobe)
 
+    # Step 2: parse query and store extracted parameters
     session["parsed"] = _parse_query(query)
     parsed = session["parsed"]
 
+    # Step 3: search listings — store up to 3 matches in session
     results = search_listings(
         description=parsed["description"],
         size=parsed.get("size"),
@@ -171,6 +150,7 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     )
     session["search_results"] = results[:TOP_RESULTS]
 
+    # Branch: no results → set error and stop (do not call downstream tools)
     if not session["search_results"]:
         session["error"] = (
             "No listings matched your search. Try broadening your description, "
@@ -178,16 +158,22 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         )
         return session
 
+    # Step 4: pass top match into outfit + fit-card tools via session
     session["selected_item"] = session["search_results"][0]
+
+    # Step 5: outfit suggestion uses selected_item + wardrobe from session
     session["outfit_suggestion"] = suggest_outfit(
         session["selected_item"],
         session["wardrobe"],
     )
+
+    # Step 6: fit card uses outfit_suggestion + selected_item from session
     session["fit_card"] = create_fit_card(
         session["outfit_suggestion"],
         session["selected_item"],
     )
 
+    # Step 7: return completed session
     return session
 
 
