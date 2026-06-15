@@ -107,8 +107,8 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
 
 def create_fit_card(outfit: str, new_item: dict) -> str:
-    """
-    Generate a short, shareable outfit caption for the thrifted find.
+    """Generate a short, shareable outfit caption for the thrifted find.
+    
 
     Args:
         outfit:   The outfit suggestion string from suggest_outfit().

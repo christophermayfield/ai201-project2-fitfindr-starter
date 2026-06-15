@@ -112,14 +112,18 @@ If outfit is empty or missing, return a descriptive error message
 **How does your agent decide which tool to call next?**
 <!-- Describe the logic your planning loop uses. What does it look at? What conditions change its behavior? How does it know when it's done? -->
 
+Search the lists and return 3 matching listings. Next, suggest outfit returns something to the effect of "pair this with your wide-leg jeans and platform Docs for a timeless and classic 90s grunge look. Roll the sleeves once and tuck the front corner slightly for shape" Next the fit-card will come in. this returns something to the effect of "thirfted this faded band tee off depop for $22 and honestly it was made for my wide-legs full look in my stories babies hehe" if the search_listings returns nothing, FitFindr tells the user what to try differently and stops, it does not call suggest_outfit with empty input
+
 ---
 
 ## State Management
 
 **How does information from one tool get passed to the next?**
 <!-- Describe how your agent stores and accesses state within a session. What data is tracked? How is it passed between tool calls? -->
+the search listings function holds 3 matches. This gets passed to the suggest outfit function. Finally, this gets passed to the fit card function. 
 
----
+
+
 
 ## Error Handling
 
@@ -127,8 +131,9 @@ For each tool, describe the specific failure mode you're handling and what the a
 
 | Tool | Failure mode | Agent response |
 |------|-------------|----------------|
-| search_listings | No results match the query | |
-| suggest_outfit | Wardrobe is empty | |
+| search_listings | No results match the query | Returns an empty list if nothing matches — does NOT raise an exception. |
+| suggest_outfit | Wardrobe is empty | If the wardrobe is empty, offer general styling advice for the item
+        rather than raising an exception or returning an empty string. |
 | create_fit_card | Outfit input is missing or incomplete | |
 
 ---
@@ -145,6 +150,56 @@ For each tool, describe the specific failure mode you're handling and what the a
      the planning loop and each individual tool. -->
 
 ---
+
+┌─────────────────────────────────────────────────────────────┐
+│                        FitFindr Flow                        │
+└─────────────────────────────────────────────────────────────┘
+
+         User submits style query
+                   │
+                   ▼
+         ┌─────────────────┐
+         │  search_listings │
+         │  (scan 3 matches)│
+         └────────┬────────┘
+                  │
+         ┌────────▼────────┐
+         │  Any results?   │
+         └──┬──────────────┘
+            │               │
+           YES              NO
+            │               │
+            │               ▼
+            │     ┌──────────────────────┐
+            │     │  FitFindr explains   │
+            │     │  what to try         │
+            │     │  differently & STOPS │
+            │     └──────────────────────┘
+            │
+            ▼
+  ┌──────────────────────┐
+  │   suggest_outfit     │
+  │                      │
+  │ "Pair this with your │
+  │  wide-leg jeans and  │
+  │  platform Docs for a │
+  │  timeless 90s grunge │
+  │  look. Roll sleeves  │
+  │  once, tuck front    │
+  │  corner for shape."  │
+  └──────────┬───────────┘
+             │
+             ▼
+  ┌──────────────────────┐
+  │      fit_card        │
+  │                      │
+  │ "Thrifted this faded │
+  │  band tee off depop  │
+  │  for $22 — made for  │
+  │  my wide-legs. Full  │
+  │  look in my stories  │
+  │  babies hehe"        │
+  └──────────────────────┘
 
 ## AI Tool Plan
 
