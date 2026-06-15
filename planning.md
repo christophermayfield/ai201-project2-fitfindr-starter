@@ -63,9 +63,16 @@ Given a thrifted item and the user's wardrobe, suggest 1–2 complete outfits.
 
 **What it returns:**
 <!-- Describe the return value -->
+     Returns:
+        A non-empty string with outfit suggestions.
+        
 
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if the wardrobe is empty or no outfit can be suggested? -->
+If the wardrobe is empty, offer general styling advice for the item
+        rather than raising an exception or returning an empty string.
+
+It should fail gracefully and return a helpful message. 
 
 ---
 
@@ -73,16 +80,24 @@ Given a thrifted item and the user's wardrobe, suggest 1–2 complete outfits.
 
 **What it does:**
 <!-- Describe what this tool does in 1–2 sentences -->
+Generate a short, shareable outfit caption for the thrifted find. (something sick)
 
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
-- `outfit` (...): ...
+- `outfit` (str): shareable outfit caption for the thrifted find.
+- `new_item` (dict): the item that was found.
+
 
 **What it returns:**
 <!-- Describe the return value -->
 
+A 2–4 sentence string usable as an Instagram/TikTok caption.
+        
+
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if the outfit data is incomplete? -->
+If outfit is empty or missing, return a descriptive error message
+        string — do NOT raise an exception in t his case
 
 ---
 
