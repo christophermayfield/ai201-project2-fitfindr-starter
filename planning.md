@@ -229,7 +229,7 @@ For the fit_card function, I'll use claude code (or another model) to implement 
 
 **Milestone 3 — Individual tool implementations:**
 
-The model will be referencing the doc strings inside the functions that are provided. 
+Yes, all the functions look like how they're implemented in the sped
 
 **Milestone 4 — Planning loop and state management:**
 
