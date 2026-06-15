@@ -20,6 +20,10 @@ Usage (once implemented):
 
 from tools import search_listings, suggest_outfit, create_fit_card
 
+import re
+
+TOP_RESULTS = 3
+
 
 # ── session state ─────────────────────────────────────────────────────────────
 
@@ -42,6 +46,69 @@ def _new_session(query: str, wardrobe: dict) -> dict:
         "outfit_suggestion": None,   # string returned by suggest_outfit
         "fit_card": None,            # string returned by create_fit_card
         "error": None,               # set if the interaction ended early
+    }
+
+
+def _parse_query(query: str) -> dict:
+    """
+    Extract search parameters from a natural-language query using regex.
+
+    Pulls out max_price (e.g. "under $30") and size (e.g. "size M"), then
+    cleans the remaining text into a keyword description for search_listings.
+    """
+    text = query.strip()
+    max_price = None
+    size = None
+
+    price_match = re.search(
+        r"(?:under|below|less than|max|up to)\s*\$?\s*(\d+(?:\.\d+)?)",
+        text,
+        re.IGNORECASE,
+    )
+    if price_match:
+        max_price = float(price_match.group(1))
+
+    size_match = re.search(
+        r"(?:in\s+)?size\s+([A-Za-z0-9/]+)",
+        text,
+        re.IGNORECASE,
+    )
+    if size_match:
+        size = size_match.group(1)
+
+    description = re.sub(
+        r"(?:under|below|less than|max|up to)\s*\$?\s*\d+(?:\.\d+)?",
+        " ",
+        text,
+        flags=re.IGNORECASE,
+    )
+    description = re.sub(
+        r"(?:in\s+)?size\s+[A-Za-z0-9/]+",
+        " ",
+        description,
+        flags=re.IGNORECASE,
+    )
+
+    for pattern in (
+        r"\bi(?:'m| am) looking for\b",
+        r"\blooking for\b",
+        r"\bwhat(?:'s| is) out there\b",
+        r"\bhow would i style (?:it|this)\??",
+        r"\bi mostly wear\b.*",
+    ):
+        description = re.sub(pattern, " ", description, flags=re.IGNORECASE)
+
+    description = description.split(".")[0].strip()
+    description = re.sub(r"\s+", " ", description).strip(" ,.-")
+    description = re.sub(r"^(?:a|an|the)\s+", "", description, flags=re.IGNORECASE)
+
+    if not description:
+        description = text
+
+    return {
+        "description": description,
+        "size": size,
+        "max_price": max_price,
     }
 
 
@@ -92,9 +159,35 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     Before writing code, complete the Planning Loop and State Management sections
     of planning.md — your implementation should match what you described there.
     """
-    # TODO: implement the planning loop
     session = _new_session(query, wardrobe)
-    session["error"] = "Planning loop not yet implemented."
+
+    session["parsed"] = _parse_query(query)
+    parsed = session["parsed"]
+
+    results = search_listings(
+        description=parsed["description"],
+        size=parsed.get("size"),
+        max_price=parsed.get("max_price"),
+    )
+    session["search_results"] = results[:TOP_RESULTS]
+
+    if not session["search_results"]:
+        session["error"] = (
+            "No listings matched your search. Try broadening your description, "
+            "raising your max price, or dropping the size filter."
+        )
+        return session
+
+    session["selected_item"] = session["search_results"][0]
+    session["outfit_suggestion"] = suggest_outfit(
+        session["selected_item"],
+        session["wardrobe"],
+    )
+    session["fit_card"] = create_fit_card(
+        session["outfit_suggestion"],
+        session["selected_item"],
+    )
+
     return session
 
 

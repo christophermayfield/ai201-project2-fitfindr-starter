@@ -18,6 +18,22 @@ from agent import run_agent
 from utils.data_loader import get_example_wardrobe, get_empty_wardrobe
 
 
+def _format_listing_text(item: dict) -> str:
+    """Format a listing dict for display in the Gradio UI."""
+    colors = ", ".join(item.get("colors", []))
+    tags = ", ".join(item.get("style_tags", []))
+    brand = item.get("brand") or "unknown"
+    return (
+        f"{item['title']}\n"
+        f"${item['price']:.2f} · {item['platform']} · size {item['size']} · "
+        f"{item['condition']} condition\n"
+        f"{item['description']}\n"
+        f"Colors: {colors}\n"
+        f"Tags: {tags}\n"
+        f"Brand: {brand}"
+    )
+
+
 # ── query handler ─────────────────────────────────────────────────────────────
 
 def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str]:
@@ -43,8 +59,25 @@ def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str]:
            string and return it along with session["outfit_suggestion"] and
            session["fit_card"].
     """
-    # TODO: implement this function
-    return "Agent not yet implemented.", "", ""
+    if not user_query or not user_query.strip():
+        return "Please enter a search query.", "", ""
+
+    wardrobe = (
+        get_example_wardrobe()
+        if wardrobe_choice == "Example wardrobe"
+        else get_empty_wardrobe()
+    )
+
+    session = run_agent(user_query.strip(), wardrobe)
+
+    if session["error"]:
+        return session["error"], "", ""
+
+    return (
+        _format_listing_text(session["selected_item"]),
+        session["outfit_suggestion"] or "",
+        session["fit_card"] or "",
+    )
 
 
 # ── interface ─────────────────────────────────────────────────────────────────
