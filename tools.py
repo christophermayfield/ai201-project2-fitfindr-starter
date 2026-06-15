@@ -13,6 +13,7 @@ Tools:
 """
 
 import os
+import re
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -69,8 +70,55 @@ def search_listings(
 
     Before writing code, fill in the Tool 1 section of planning.md.
     """
-    # Replace this with your implementation
-    return []
+    listings = load_listings()
+    keywords = _extract_keywords(description)
+
+    scored: list[tuple[int, dict]] = []
+    for listing in listings:
+        if max_price is not None and listing["price"] > max_price:
+            continue
+        if size is not None and not _size_matches(listing["size"], size):
+            continue
+
+        score = _score_listing(listing, keywords)
+        if score > 0:
+            scored.append((score, listing))
+
+    scored.sort(key=lambda pair: pair[0], reverse=True)
+    return [listing for _, listing in scored]
+
+
+def _extract_keywords(description: str) -> list[str]:
+    """Split a description into lowercase keywords for relevance scoring."""
+    return re.findall(r"[a-z0-9]+", description.lower())
+
+
+def _listing_search_text(listing: dict) -> str:
+    """Combine searchable listing fields into one lowercase string."""
+    style_tags = " ".join(listing.get("style_tags", []))
+    colors = " ".join(listing.get("colors", []))
+    return " ".join(
+        [
+            listing.get("title", ""),
+            listing.get("description", ""),
+            listing.get("category", ""),
+            style_tags,
+            colors,
+        ]
+    ).lower()
+
+
+def _score_listing(listing: dict, keywords: list[str]) -> int:
+    """Count how many description keywords appear in the listing's searchable text."""
+    if not keywords:
+        return 0
+    text = _listing_search_text(listing)
+    return sum(1 for keyword in keywords if keyword in text)
+
+
+def _size_matches(listing_size: str, requested_size: str) -> bool:
+    """Case-insensitive size match (e.g. 'M' matches 'S/M')."""
+    return requested_size.lower() in listing_size.lower()
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
