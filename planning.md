@@ -225,9 +225,13 @@ For the initial search_listings function, I'll use claude code to implement the 
 
 After this, I will test using pytest and several use cases.
 
-For the 
+For the suggest outfit function, I'll use claude code (or another model) to implement the function using tool 2 spec above. I'll have it explain to me and from there i'll use some other testing frameworks, such as pytest in isolation. 
+
+For the fit_card function, I'll use claude code (or another model) to implement the last function using the tool 3 spec. I'll have it implement it using a "human in the loop" methodology. lastely i'll use modern testing frameworks to ensure its effacacy. 
 
 **Milestone 3 — Individual tool implementations:**
+
+The model will be referencing the doc strings inside the functions that are provided. 
 
 **Milestone 4 — Planning loop and state management:**
 
@@ -241,6 +245,7 @@ Write out what a full user interaction looks like from start to finish — tool 
 
 **Step 1:**
 <!-- What does the agent do first? Which tool is called? With what input? -->
+
 
 **Step 2:**
 <!-- What happens next? What was returned from step 1? What tool is called now? -->
