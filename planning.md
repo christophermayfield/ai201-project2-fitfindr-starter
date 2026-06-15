@@ -216,6 +216,17 @@ For each tool, describe the specific failure mode you're handling and what the a
      search_listings() using load_listings() from the data loader — then test it against 3 queries
      before trusting it" is a plan. -->
 
+For the initial search_listings function, I'll use claude code to implement the tool 1 spec above with Args:
+        description: Keywords describing what the user is looking for
+                     (e.g., "vintage graphic tee").
+        size:        Size string to filter by, or None to skip size filtering.
+                     Matching is case-insensitive (e.g., "M" matches "S/M").
+        max_price:   Maximum price (inclusive), or None to skip price filtering.
+
+After this, I will test using pytest and several use cases.
+
+For the 
+
 **Milestone 3 — Individual tool implementations:**
 
 **Milestone 4 — Planning loop and state management:**
