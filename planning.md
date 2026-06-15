@@ -15,33 +15,31 @@ You must have at least 3 tools. The three required tools are listed — add any 
 ### Tool 1: search_listings
 
 **What it does:**
-<!-- Describe what this tool does in 1–2 sentences -->
-this is a helps users finding secondhand pieces of clothing. It helps them figure out how to wear them. 
+Searches the mock secondhand listings dataset for items that match the user's keywords, with optional size and price filters. Results are ranked by relevance so the best matches appear first.
 
 **Input parameters:**
-<!-- List each parameter, its type, and what it represents -->
-- `description` (str): describes context of the item
-- `size` (str): Waist, Length
-- `max_price` (float): maximum price they are willing to pay
-- `category` (str): tops, bottoms, outer
--  `Conditions` (str): describes what condition the item is in
--  `brand`(str): brand of the item
-- `colors`([str]): color of the item
-- `platform`(str): where the item is sold
-- `id` (str): unique identifier for the item
-- `title`(str): title of the item
-- `style_tags`([str]): tags that describe the style
-
+- `description` (str, required): Keywords describing what the user is looking for (e.g., `"vintage graphic tee"`). Used to score listings by keyword overlap against each listing's `title`, `description`, `style_tags`, `category`, and `colors`.
+- `size` (str | None, optional): Size to filter by, or `None` to skip size filtering. Matching is case-insensitive (e.g., `"M"` matches `"S/M"`).
+- `max_price` (float | None, optional): Maximum price in dollars (inclusive), or `None` to skip price filtering.
 
 **What it returns:**
-<!-- Describe the return value — what fields does a result contain? -->
- Returns:
-        A list of matching listing dicts, sorted by relevance (best match first).
-        
+A list of matching listing dicts, sorted by relevance (best match first). Returns an empty list if nothing matches.
+
+Each listing dict in the list contains these fields (these are **output** fields, not inputs to the tool):
+- `id` (str): unique identifier (e.g., `"lst_033"`)
+- `title` (str): short listing title
+- `description` (str): full item description
+- `category` (str): one of `tops`, `bottoms`, `outerwear`, `shoes`, `accessories`
+- `style_tags` (list[str]): style descriptors (e.g., `["vintage", "graphic tee", "grunge"]`)
+- `size` (str): listed size
+- `condition` (str): item condition (e.g., `"good"`, `"fair"`)
+- `price` (float): price in dollars
+- `colors` (list[str]): item colors
+- `brand` (str | null): brand name, or `null` if unknown
+- `platform` (str): where the item is sold (e.g., `"depop"`, `"poshmark"`)
 
 **What happens if it fails or returns nothing:**
-<!-- What should the agent do if no listings match? -->
-Returns an empty list if nothing matches — does NOT raise an exception.
+Returns an empty list if no listings match — does **not** raise an exception. The agent should set `session["error"]` to a helpful message (e.g., suggest broadening the description, raising `max_price`, or dropping the size filter) and stop — it must **not** call `suggest_outfit` with empty input.
 ---
 
 ### Tool 2: suggest_outfit
@@ -235,6 +233,8 @@ The model will be referencing the doc strings inside the functions that are prov
 
 **Milestone 4 — Planning loop and state management:**
 
+
+
 ---
 
 ## A Complete Interaction (Step by Step)
@@ -243,15 +243,129 @@ Write out what a full user interaction looks like from start to finish — tool 
 
 **Example user query:** "I'm looking for a vintage graphic tee under $30. I mostly wear baggy jeans and chunky sneakers. What's out there and how would I style it?"
 
-**Step 1:**
-<!-- What does the agent do first? Which tool is called? With what input? -->
+**Step 1 — User submits query; agent initializes session and parses intent**
 
+The user types the example query into the Gradio search box and leaves the wardrobe set to **"Example wardrobe"**. Clicking **Find it** calls `handle_query()`, which passes the query and `get_example_wardrobe()` into `run_agent()`.
 
-**Step 2:**
-<!-- What happens next? What was returned from step 1? What tool is called now? -->
+`run_agent()` calls `_new_session()` and stores:
+- `session["query"]` — the full natural-language request
+- `session["wardrobe"]` — the example wardrobe (10 items, including baggy jeans and chunky sneakers)
 
-**Step 3:**
-<!-- Continue until the full interaction is complete -->
+The agent parses the query and writes to `session["parsed"]`:
+- `description`: `"vintage graphic tee"` (keywords for what to find)
+- `max_price`: `30.0` (from "under $30")
+- `size`: `None` (no size mentioned — skip size filtering)
+
+The user also mentioned baggy jeans and chunky sneakers; that styling context stays in the original query and is used later by `suggest_outfit` via the wardrobe, not as `search_listings` filters.
+
+**Step 2 — `search_listings` scans the dataset and ranks matches**
+
+The agent calls:
+
+```python
+search_listings(
+    description="vintage graphic tee",
+    size=None,
+    max_price=30.0,
+)
+```
+
+Inside the tool, `load_listings()` loads all 40 mock listings. Listings over $30 are filtered out. Remaining listings are scored by keyword overlap with the description (`vintage`, `graphic`, `tee`, etc.). Listings with score 0 are dropped; the rest are sorted highest-first.
+
+`session["search_results"]` is set to the top matches, e.g.:
+
+| Rank | id | title | price | platform |
+|------|----|-------|-------|----------|
+| 1 | `lst_033` | Vintage Band Tee — Faded Grey | $19.00 | depop |
+| 2 | `lst_006` | Graphic Tee — 2003 Tour Bootleg Style | $24.00 | depop |
+| 3 | `lst_002` | Y2K Baby Tee — Butterfly Print | $18.00 | depop |
+
+Because results exist, the agent does **not** set `session["error"]` and does **not** stop early.
+
+**Step 3 — Agent selects the top listing and stores it in session**
+
+The agent picks the highest-scoring result as `session["selected_item"]`:
+
+```python
+session["selected_item"] = session["search_results"][0]  # lst_033
+```
+
+This listing dict is the single item passed into the outfit and fit-card tools — `suggest_outfit` is never called with an empty or missing item.
+
+**Step 4 — `suggest_outfit` builds styling advice from the wardrobe**
+
+The agent calls:
+
+```python
+suggest_outfit(
+    new_item=session["selected_item"],   # Vintage Band Tee — Faded Grey
+    wardrobe=session["wardrobe"],        # example wardrobe with 10 items
+)
+```
+
+The tool formats the new item plus wardrobe pieces (notably **baggy straight-leg jeans** `w_001` and **chunky white sneakers** `w_007`) into an LLM prompt and asks for 1–2 complete outfit ideas using named pieces from the closet.
+
+`session["outfit_suggestion"]` is set to a non-empty string, e.g.:
+
+> *"Pair the faded grey band tee with your baggy straight-leg jeans in dark wash and your chunky white sneakers for an easy vintage streetwear look. Tuck just the front of the tee or leave it loose over the waistband — both work with the boxy fit. For a second option, layer your black cropped zip hoodie over the tee, keep the same jeans, and swap to your black combat boots for a grungier night-out vibe."*
+
+Because the wardrobe is not empty, the response references specific wardrobe items rather than only generic advice.
+
+**Step 5 — `create_fit_card` turns the outfit into a shareable caption**
+
+The agent calls:
+
+```python
+create_fit_card(
+    outfit=session["outfit_suggestion"],
+    new_item=session["selected_item"],
+)
+```
+
+The tool sends the outfit text plus item details (title, price, platform) to the LLM with a casual OOTD-style prompt and higher temperature so captions feel varied.
+
+`session["fit_card"]` is set to a 2–4 sentence caption, e.g.:
+
+> *"thrifted this faded grey band tee off depop for $19 and it was literally made for my baggy jeans era. full fit breakdown in my stories — the chunky sneaker combo is undefeated rn"*
+
+**Step 6 — Agent returns session; Gradio maps results to the three panels**
+
+`run_agent()` returns the completed session with `session["error"]` still `None`. `handle_query()` formats `session["selected_item"]` into readable listing text and passes three strings to the UI:
+
+- **Top listing found** — formatted details for `lst_033`
+- **Outfit idea** — `session["outfit_suggestion"]`
+- **Your fit card** — `session["fit_card"]`
 
 **Final output to user:**
-<!-- What does the user actually see at the end? -->
+
+The user sees three side-by-side panels in the FitFindr UI:
+
+**🛍️ Top listing found**
+```
+Vintage Band Tee — Faded Grey
+$19.00 · depop · size L · fair condition
+Faded grey band-style tee with distressed graphic. Crew neck. Fits boxy.
+Colors: grey, charcoal
+Tags: vintage, grunge, band tee, graphic tee, streetwear
+```
+
+**👗 Outfit idea**
+```
+Pair the faded grey band tee with your baggy straight-leg jeans in dark wash
+and your chunky white sneakers for an easy vintage streetwear look. Tuck just
+the front of the tee or leave it loose over the waistband — both work with
+the boxy fit. For a second option, layer your black cropped zip hoodie over
+the tee, keep the same jeans, and swap to your black combat boots for a
+grungier night-out vibe.
+```
+
+**✨ Your fit card**
+```
+thrifted this faded grey band tee off depop for $19 and it was literally made
+for my baggy jeans era. full fit breakdown in my stories — the chunky sneaker
+combo is undefeated rn
+```
+
+---
+
+**Alternate path (no results):** If `search_listings` returned `[]` (e.g., query `"designer ballgown size XXS under $5"`), the agent would set `session["error"]` to a helpful message like *"No listings matched — try raising your max price, dropping the size filter, or broadening your description."*, return immediately, and **not** call `suggest_outfit` or `create_fit_card`. The UI would show that message in the first panel only, with the other two panels empty.
