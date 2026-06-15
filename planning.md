@@ -58,8 +58,9 @@ Given a thrifted item and the user's wardrobe, suggest 1–2 complete outfits.
 
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
-- `new_item` (dict): ...
-- `wardrobe` (dict): ...
+- `new_item` (dict): A listing dict (the item the user is considering buying).
+- `wardrobe` (dict): A wardrobe dict with an 'items' key containing a list of
+                  wardrobe item dicts. 
 
 **What it returns:**
 <!-- Describe the return value -->
@@ -134,7 +135,8 @@ For each tool, describe the specific failure mode you're handling and what the a
 | search_listings | No results match the query | Returns an empty list if nothing matches — does NOT raise an exception. |
 | suggest_outfit | Wardrobe is empty | If the wardrobe is empty, offer general styling advice for the item
         rather than raising an exception or returning an empty string. |
-| create_fit_card | Outfit input is missing or incomplete | |
+| create_fit_card | Outfit input is missing or incomplete | If outfit is empty or missing, return a descriptive error message
+        string — do NOT raise an exception. |
 
 ---
 
